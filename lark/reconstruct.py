@@ -10,6 +10,7 @@ from .grammar import Terminal, NonTerminal
 from .tree_matcher import TreeMatcher, is_discarded_terminal
 from .utils import is_id_continue
 
+
 def is_iter_empty(i):
     try:
         _ = next(i)
@@ -26,7 +27,7 @@ class WriteTokensTransformer(Transformer_InPlace):
         self.term_subs = term_subs
 
     def __default__(self, data, children, meta):
-        if not getattr(meta, 'match_tree', False):
+        if not getattr(meta, "match_tree", False):
             return Tree(data, children)
 
         iter_args = iter(children)
@@ -38,7 +39,9 @@ class WriteTokensTransformer(Transformer_InPlace):
                 except KeyError:
                     t = self.tokens[sym.name]
                     if not isinstance(t.pattern, PatternStr):
-                        raise NotImplementedError("Reconstructing regexps not supported yet: %s" % t)
+                        raise NotImplementedError(
+                            "Reconstructing regexps not supported yet: %s" % t
+                        )
 
                     v = t.pattern.value
                 to_write.append(v)
@@ -73,7 +76,9 @@ class Reconstructor(TreeMatcher):
     def __init__(self, parser, term_subs=None):
         TreeMatcher.__init__(self, parser)
 
-        self.write_tokens = WriteTokensTransformer({t.name:t for t in self.tokens}, term_subs or {})
+        self.write_tokens = WriteTokensTransformer(
+            {t.name: t for t in self.tokens}, term_subs or {}
+        )
 
     def _reconstruct(self, tree):
         unreduced_tree = self.match_tree(tree, tree.data)
@@ -92,10 +97,16 @@ class Reconstructor(TreeMatcher):
         if postproc:
             x = postproc(x)
         y = []
-        prev_item = ''
+        prev_item = ""
         for item in x:
-            if insert_spaces and prev_item and item and is_id_continue(prev_item[-1]) and is_id_continue(item[0]):
-                y.append(' ')
+            if (
+                insert_spaces
+                and prev_item
+                and item
+                and is_id_continue(prev_item[-1])
+                and is_id_continue(item[0])
+            ):
+                y.append(" ")
             y.append(item)
             prev_item = item
-        return ''.join(y)
+        return "".join(y)

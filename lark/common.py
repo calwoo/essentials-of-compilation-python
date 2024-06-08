@@ -8,10 +8,26 @@ from .lexer import TerminalDef
 
 
 class LexerConf(Serialize):
-    __serialize_fields__ = 'terminals', 'ignore', 'g_regex_flags', 'use_bytes', 'lexer_type'
-    __serialize_namespace__ = TerminalDef,
+    __serialize_fields__ = (
+        "terminals",
+        "ignore",
+        "g_regex_flags",
+        "use_bytes",
+        "lexer_type",
+    )
+    __serialize_namespace__ = (TerminalDef,)
 
-    def __init__(self, terminals, re_module, ignore=(), postlex=None, callbacks=None, g_regex_flags=0, skip_validation=False, use_bytes=False):
+    def __init__(
+        self,
+        terminals,
+        re_module,
+        ignore=(),
+        postlex=None,
+        callbacks=None,
+        g_regex_flags=0,
+        skip_validation=False,
+        use_bytes=False,
+    ):
         self.terminals = terminals
         self.terminals_by_name = {t.name: t for t in self.terminals}
         assert len(self.terminals) == len(self.terminals_by_name)
@@ -26,7 +42,10 @@ class LexerConf(Serialize):
 
     @property
     def tokens(self):
-        warn("LexerConf.tokens is deprecated. Use LexerConf.terminals instead", DeprecationWarning)
+        warn(
+            "LexerConf.tokens is deprecated. Use LexerConf.terminals instead",
+            DeprecationWarning,
+        )
         return self.terminals
 
     def _deserialize(self):
@@ -46,7 +65,7 @@ class LexerConf(Serialize):
 
 
 class ParserConf(Serialize):
-    __serialize_fields__ = 'rules', 'start', 'parser_type'
+    __serialize_fields__ = "rules", "start", "parser_type"
 
     def __init__(self, rules, callbacks, start):
         assert isinstance(start, list)
@@ -55,5 +74,6 @@ class ParserConf(Serialize):
         self.start = start
 
         self.parser_type = None
+
 
 ###}

@@ -8,22 +8,24 @@ from collections import deque
 import sys, re
 import logging
 from io import open
+
 logger = logging.getLogger("lark")
 logger.addHandler(logging.StreamHandler())
 # Set to highest level, since we have some warnings amongst the code
 # By default, we should not output any log messages
 logger.setLevel(logging.CRITICAL)
 
-if sys.version_info[0]>2:
+if sys.version_info[0] > 2:
     from abc import ABC, abstractmethod
 else:
     from abc import ABCMeta, abstractmethod
-    class ABC(object): # Provide Python27 compatibility
+
+    class ABC(object):  # Provide Python27 compatibility
         __slots__ = ()
         __metclass__ = ABCMeta
 
 
-Py36 = (sys.version_info[:2] >= (3, 6))
+Py36 = sys.version_info[:2] >= (3, 6)
 
 NO_VALUE = object()
 
@@ -42,12 +44,14 @@ def classify(seq, key=None, value=None):
 
 def _deserialize(data, namespace, memo):
     if isinstance(data, dict):
-        if '__type__' in data:  # Object
-            class_ = namespace[data['__type__']]
+        if "__type__" in data:  # Object
+            class_ = namespace[data["__type__"]]
             return class_.deserialize(data, memo)
-        elif '@' in data:
-            return memo[data['@']]
-        return {key:_deserialize(value, namespace, memo) for key, value in data.items()}
+        elif "@" in data:
+            return memo[data["@"]]
+        return {
+            key: _deserialize(value, namespace, memo) for key, value in data.items()
+        }
     elif isinstance(data, list):
         return [_deserialize(value, namespace, memo) for value in data]
     return data
@@ -68,24 +72,24 @@ class Serialize(object):
 
     def serialize(self, memo=None):
         if memo and memo.in_types(self):
-            return {'@': memo.memoized.get(self)}
+            return {"@": memo.memoized.get(self)}
 
-        fields = getattr(self, '__serialize_fields__')
+        fields = getattr(self, "__serialize_fields__")
         res = {f: _serialize(getattr(self, f), memo) for f in fields}
-        res['__type__'] = type(self).__name__
-        if hasattr(self, '_serialize'):
+        res["__type__"] = type(self).__name__
+        if hasattr(self, "_serialize"):
             self._serialize(res, memo)
         return res
 
     @classmethod
     def deserialize(cls, data, memo):
-        namespace = getattr(cls, '__serialize_namespace__', [])
-        namespace = {c.__name__:c for c in namespace}
+        namespace = getattr(cls, "__serialize_namespace__", [])
+        namespace = {c.__name__: c for c in namespace}
 
-        fields = getattr(cls, '__serialize_fields__')
+        fields = getattr(cls, "__serialize_fields__")
 
-        if '@' in data:
-            return memo[data['@']]
+        if "@" in data:
+            return memo[data["@"]]
 
         inst = cls.__new__(cls)
         for f in fields:
@@ -94,7 +98,7 @@ class Serialize(object):
             except KeyError as e:
                 raise KeyError("Cannot find key for class", cls, e)
 
-        if hasattr(inst, '_deserialize'):
+        if hasattr(inst, "_deserialize"):
             inst._deserialize()
 
         return inst
@@ -103,7 +107,7 @@ class Serialize(object):
 class SerializeMemoizer(Serialize):
     "A version of serialize that memoizes objects to reduce space"
 
-    __serialize_fields__ = 'memoized',
+    __serialize_fields__ = ("memoized",)
 
     def __init__(self, types_to_memoize):
         self.types_to_memoize = tuple(types_to_memoize)
@@ -122,7 +126,7 @@ class SerializeMemoizer(Serialize):
 
 try:
     STRING_TYPE = basestring
-except NameError:   # Python 3
+except NameError:  # Python 3
     STRING_TYPE = str
 
 
@@ -130,11 +134,11 @@ import types
 from functools import wraps, partial
 from contextlib import contextmanager
 
-Str = type(u'')
+Str = type("")
 try:
     classtype = types.ClassType  # Python2
 except AttributeError:
-    classtype = type    # Python3
+    classtype = type  # Python3
 
 
 def smart_decorator(f, create_decorator):
@@ -149,7 +153,9 @@ def smart_decorator(f, create_decorator):
 
     elif isinstance(f, partial):
         # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
-        return wraps(f.func)(create_decorator(lambda *args, **kw: f(*args[1:], **kw), True))
+        return wraps(f.func)(
+            create_decorator(lambda *args, **kw: f(*args[1:], **kw), True)
+        )
 
     else:
         return create_decorator(f.__func__.__call__, True)
@@ -162,17 +168,22 @@ except ImportError:
 
 import sre_parse
 import sre_constants
-categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
+
+categ_pattern = re.compile(r"\\p{[A-Za-z_]+}")
+
 
 def get_regexp_width(expr):
     if regex:
         # Since `sre_parse` cannot deal with Unicode categories of the form `\p{Mn}`, we replace these with
         # a simple letter, which makes no difference as we are only trying to get the possible lengths of the regex
         # match here below.
-        regexp_final = re.sub(categ_pattern, 'A', expr)
+        regexp_final = re.sub(categ_pattern, "A", expr)
     else:
         if re.search(categ_pattern, expr):
-            raise ImportError('`regex` module must be installed in order to use Unicode categories.', expr)
+            raise ImportError(
+                "`regex` module must be installed in order to use Unicode categories.",
+                expr,
+            )
         regexp_final = expr
     try:
         return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]
@@ -183,21 +194,27 @@ def get_regexp_width(expr):
             # sre_parse does not support the new features in regex. To not completely fail in that case,
             # we manually test for the most important info (whether the empty string is matched)
             c = regex.compile(regexp_final)
-            if c.match('') is None:
+            if c.match("") is None:
                 return 1, sre_constants.MAXREPEAT
             else:
                 return 0, sre_constants.MAXREPEAT
 
+
 ###}
 
 
-_ID_START =    'Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Pc'
-_ID_CONTINUE = _ID_START + ('Nd', 'Nl',)
+_ID_START = "Lu", "Ll", "Lt", "Lm", "Lo", "Mn", "Mc", "Pc"
+_ID_CONTINUE = _ID_START + (
+    "Nd",
+    "Nl",
+)
+
 
 def _test_unicode_category(s, categories):
     if len(s) != 1:
         return all(_test_unicode_category(char, categories) for char in s)
-    return s == '_' or unicodedata.category(s) in categories
+    return s == "_" or unicodedata.category(s) in categories
+
 
 def is_id_continue(s):
     """
@@ -205,6 +222,7 @@ def is_id_continue(s):
     numbers, etc. all pass). Synonymous with a Python `ID_CONTINUE` identifier. See PEP 3131 for details.
     """
     return _test_unicode_category(s, _ID_CONTINUE)
+
 
 def is_id_start(s):
     """
@@ -216,25 +234,26 @@ def is_id_start(s):
 
 def dedup_list(l):
     """Given a list (l) will removing duplicates from the list,
-       preserving the original order of the list. Assumes that
-       the list entries are hashable."""
+    preserving the original order of the list. Assumes that
+    the list entries are hashable."""
     dedup = set()
     return [x for x in l if not (x in dedup or dedup.add(x))]
 
 
 try:
-    from contextlib import suppress     # Python 3
+    from contextlib import suppress  # Python 3
 except ImportError:
+
     @contextmanager
     def suppress(*excs):
-        '''Catch and dismiss the provided exception
+        """Catch and dismiss the provided exception
 
         >>> x = 'hello'
         >>> with suppress(IndexError):
         ...     x = x[10]
         >>> x
         'hello'
-        '''
+        """
         try:
             yield
         except excs:
@@ -259,7 +278,6 @@ class Enumerator(Serialize):
         return r
 
 
-
 def combine_alternatives(lists):
     """
     Accepts a list of alternatives, and enumerates all their possible concatinations.
@@ -278,13 +296,14 @@ def combine_alternatives(lists):
         return [[]]
     assert all(l for l in lists), lists
     init = [[x] for x in lists[0]]
-    return reduce(lambda a,b: [i+[j] for i in a for j in b], lists[1:], init)
+    return reduce(lambda a, b: [i + [j] for i in a for j in b], lists[1:], init)
 
 
 try:
     import atomicwrites
 except ImportError:
     atomicwrites = None
+
 
 class FS:
     exists = os.path.exists
@@ -297,14 +316,13 @@ class FS:
             return open(name, mode, **kwargs)
 
 
-
 def isascii(s):
-    """ str.isascii only exists in python3.7+ """
+    """str.isascii only exists in python3.7+"""
     try:
         return s.isascii()
     except AttributeError:
         try:
-            s.encode('ascii')
+            s.encode("ascii")
             return True
         except (UnicodeDecodeError, UnicodeEncodeError):
             return False
@@ -312,7 +330,7 @@ def isascii(s):
 
 class fzset(frozenset):
     def __repr__(self):
-        return '{%s}' % ', '.join(map(repr, self))
+        return "{%s}" % ", ".join(map(repr, self))
 
 
 def classify_bool(seq, pred):
@@ -339,6 +357,7 @@ def bfs(initial, expand):
                 visited.add(next_node)
                 open_q.append(next_node)
 
+
 def bfs_all_unique(initial, expand):
     "bfs, but doesn't keep track of visited (aka seen), because there can be no repetitions"
     open_q = deque(list(initial))
@@ -356,11 +375,9 @@ def _serialize(value, memo):
     elif isinstance(value, frozenset):
         return list(value)  # TODO reversible?
     elif isinstance(value, dict):
-        return {key:_serialize(elem, memo) for key, elem in value.items()}
+        return {key: _serialize(elem, memo) for key, elem in value.items()}
     # assert value is None or isinstance(value, (int, float, str, tuple)), value
     return value
-
-
 
 
 def small_factors(n, max_factor):

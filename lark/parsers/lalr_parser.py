@@ -1,5 +1,6 @@
 """This module implements a LALR(1) Parser
 """
+
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 from copy import deepcopy, copy
@@ -12,6 +13,7 @@ from .lalr_interactive_parser import InteractiveParser
 from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 
 ###{standalone
+
 
 class LALR_Parser(Serialize):
     def __init__(self, parser_conf, debug=False):
@@ -32,7 +34,7 @@ class LALR_Parser(Serialize):
 
     def serialize(self, memo):
         return self._parse_table.serialize(memo)
-    
+
     def parse_interactive(self, lexer, start):
         return self.parser.parse(lexer, start, start_interactive=True)
 
@@ -54,14 +56,16 @@ class LALR_Parser(Serialize):
                 if isinstance(e, UnexpectedCharacters):
                     # If user didn't change the character position, then we should
                     if p == s.line_ctr.char_pos:
-                        s.line_ctr.feed(s.text[p:p+1])
+                        s.line_ctr.feed(s.text[p : p + 1])
 
                 try:
                     return e.interactive_parser.resume_parse()
                 except UnexpectedToken as e2:
-                    if (isinstance(e, UnexpectedToken)
-                        and e.token.type == e2.token.type == '$END'
-                        and e.interactive_parser == e2.interactive_parser):
+                    if (
+                        isinstance(e, UnexpectedToken)
+                        and e.token.type == e2.token.type == "$END"
+                        and e.interactive_parser == e2.interactive_parser
+                    ):
                         # Prevent infinite loop
                         raise e2
                     e = e2
@@ -70,7 +74,14 @@ class LALR_Parser(Serialize):
 
 
 class ParseConf(object):
-    __slots__ = 'parse_table', 'callbacks', 'start', 'start_state', 'end_state', 'states'
+    __slots__ = (
+        "parse_table",
+        "callbacks",
+        "start",
+        "start_state",
+        "end_state",
+        "states",
+    )
 
     def __init__(self, parse_table, callbacks, start):
         self.parse_table = parse_table
@@ -84,7 +95,7 @@ class ParseConf(object):
 
 
 class ParserState(object):
-    __slots__ = 'parse_conf', 'lexer', 'state_stack', 'value_stack'
+    __slots__ = "parse_conf", "lexer", "state_stack", "value_stack"
 
     def __init__(self, parse_conf, lexer, state_stack=None, value_stack=None):
         self.parse_conf = parse_conf
@@ -100,12 +111,15 @@ class ParserState(object):
     def __eq__(self, other):
         if not isinstance(other, ParserState):
             return NotImplemented
-        return len(self.state_stack) == len(other.state_stack) and self.position == other.position
+        return (
+            len(self.state_stack) == len(other.state_stack)
+            and self.position == other.position
+        )
 
     def __copy__(self):
         return type(self)(
             self.parse_conf,
-            self.lexer, # XXX copy
+            self.lexer,  # XXX copy
             copy(self.state_stack),
             deepcopy(self.value_stack),
         )
@@ -126,7 +140,9 @@ class ParserState(object):
                 action, arg = states[state][token.type]
             except KeyError:
                 expected = {s for s in states[state].keys() if s.isupper()}
-                raise UnexpectedToken(token, expected, state=self, interactive_parser=None)
+                raise UnexpectedToken(
+                    token, expected, state=self, interactive_parser=None
+                )
 
             assert arg != end_state
 
@@ -134,7 +150,11 @@ class ParserState(object):
                 # shift once and return
                 assert not is_end
                 state_stack.append(arg)
-                value_stack.append(token if token.type not in callbacks else callbacks[token.type](token))
+                value_stack.append(
+                    token
+                    if token.type not in callbacks
+                    else callbacks[token.type](token)
+                )
                 return
             else:
                 # reduce+shift as many times as necessary
@@ -157,19 +177,21 @@ class ParserState(object):
                 if is_end and state_stack[-1] == end_state:
                     return value_stack[-1]
 
+
 class _Parser(object):
     def __init__(self, parse_table, callbacks, debug=False):
         self.parse_table = parse_table
         self.callbacks = callbacks
         self.debug = debug
 
-    def parse(self, lexer, start, value_stack=None, state_stack=None, start_interactive=False):
+    def parse(
+        self, lexer, start, value_stack=None, state_stack=None, start_interactive=False
+    ):
         parse_conf = ParseConf(self.parse_table, self.callbacks, start)
         parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
         if start_interactive:
             return InteractiveParser(self, parser_state, parser_state.lexer)
         return self.parse_from_state(parser_state)
-    
 
     def parse_from_state(self, state):
         # Main LALR-parser loop
@@ -178,7 +200,11 @@ class _Parser(object):
             for token in state.lexer.lex(state):
                 state.feed_token(token)
 
-            end_token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
+            end_token = (
+                Token.new_borrow_pos("$END", "", token)
+                if token
+                else Token("$END", "", 0, 1, 1)
+            )
             return state.feed_token(end_token, True)
         except UnexpectedInput as e:
             try:
@@ -192,9 +218,10 @@ class _Parser(object):
                 print("STATE STACK DUMP")
                 print("----------------")
                 for i, s in enumerate(state.state_stack):
-                    print('%d)' % i , s)
+                    print("%d)" % i, s)
                 print("")
 
             raise
-###}
 
+
+###}

@@ -14,7 +14,7 @@ class ConfigurationError(LarkError, ValueError):
     pass
 
 
-def assert_config(value, options, msg='Got %r, expected one of %s'):
+def assert_config(value, options, msg="Got %r, expected one of %s"):
     if value not in options:
         raise ConfigurationError(msg % (value, options))
 
@@ -42,6 +42,7 @@ class UnexpectedInput(LarkError):
 
     After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
     """
+
     pos_in_stream = None
     _terminals_by_name = None
 
@@ -58,15 +59,19 @@ class UnexpectedInput(LarkError):
         start = max(pos - span, 0)
         end = pos + span
         if not isinstance(text, bytes):
-            before = text[start:pos].rsplit('\n', 1)[-1]
-            after = text[pos:end].split('\n', 1)[0]
-            return before + after + '\n' + ' ' * len(before.expandtabs()) + '^\n'
+            before = text[start:pos].rsplit("\n", 1)[-1]
+            after = text[pos:end].split("\n", 1)[0]
+            return before + after + "\n" + " " * len(before.expandtabs()) + "^\n"
         else:
-            before = text[start:pos].rsplit(b'\n', 1)[-1]
-            after = text[pos:end].split(b'\n', 1)[0]
-            return (before + after + b'\n' + b' ' * len(before.expandtabs()) + b'^\n').decode("ascii", "backslashreplace")
+            before = text[start:pos].rsplit(b"\n", 1)[-1]
+            after = text[pos:end].split(b"\n", 1)[0]
+            return (
+                before + after + b"\n" + b" " * len(before.expandtabs()) + b"^\n"
+            ).decode("ascii", "backslashreplace")
 
-    def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
+    def match_examples(
+        self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False
+    ):
         """Allows you to detect what's wrong in the input text by matching
         against example errors.
 
@@ -98,9 +103,15 @@ class UnexpectedInput(LarkError):
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
-                        if use_accepts and hasattr(self, 'accepts') and ut.accepts != self.accepts:
-                            logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
-                                         (self.state, self.accepts, ut.accepts, i, j))
+                        if (
+                            use_accepts
+                            and hasattr(self, "accepts")
+                            and ut.accepts != self.accepts
+                        ):
+                            logger.debug(
+                                "Different accepts with same state[%d]: %s != %s at example [%s][%s]"
+                                % (self.state, self.accepts, ut.accepts, i, j)
+                            )
                             continue
                         try:
                             if ut.token == self.token:  # Try exact match first
@@ -109,14 +120,21 @@ class UnexpectedInput(LarkError):
 
                             if token_type_match_fallback:
                                 # Fallback to token types match
-                                if (ut.token.type == self.token.type) and not candidate[-1]:
-                                    logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
+                                if (ut.token.type == self.token.type) and not candidate[
+                                    -1
+                                ]:
+                                    logger.debug(
+                                        "Token Type Fallback at example [%s][%s]"
+                                        % (i, j)
+                                    )
                                     candidate = label, True
 
                         except AttributeError:
                             pass
                         if candidate[0] is None:
-                            logger.debug("Same State match at example [%s][%s]" % (i, j))
+                            logger.debug(
+                                "Same State match at example [%s][%s]" % (i, j)
+                            )
                             candidate = label, False
 
         return candidate[0]
@@ -124,13 +142,14 @@ class UnexpectedInput(LarkError):
     def _format_expected(self, expected):
         if self._terminals_by_name:
             d = self._terminals_by_name
-            expected = [d[t_name].user_repr() if t_name in d else t_name for t_name in expected]
-        return "Expected one of: \n\t* %s\n" % '\n\t* '.join(expected)
+            expected = [
+                d[t_name].user_repr() if t_name in d else t_name for t_name in expected
+            ]
+        return "Expected one of: \n\t* %s\n" % "\n\t* ".join(expected)
 
 
 class UnexpectedEOF(ParseError, UnexpectedInput):
-    """An exception that is raised by the parser, when the input ends while it still expects a token.
-    """
+    """An exception that is raised by the parser, when the input ends while it still expects a token."""
 
     def __init__(self, expected, state=None, terminals_by_name=None):
         super(UnexpectedEOF, self).__init__()
@@ -138,12 +157,12 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
         self.expected = expected
         self.state = state
         from .lexer import Token
+
         self.token = Token("<EOF>", "")  # , line=-1, column=-1, pos_in_stream=-1)
         self.pos_in_stream = -1
         self.line = -1
         self.column = -1
         self._terminals_by_name = terminals_by_name
-
 
     def __str__(self):
         message = "Unexpected end-of-input. "
@@ -152,12 +171,23 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
-    """An exception that is raised by the lexer, when it cannot match the next 
+    """An exception that is raised by the lexer, when it cannot match the next
     string of characters to any of its terminals.
     """
 
-    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None,
-                 terminals_by_name=None, considered_rules=None):
+    def __init__(
+        self,
+        seq,
+        lex_pos,
+        line,
+        column,
+        allowed=None,
+        considered_tokens=None,
+        state=None,
+        token_history=None,
+        terminals_by_name=None,
+        considered_rules=None,
+    ):
         super(UnexpectedCharacters, self).__init__()
 
         # TODO considered_tokens and allowed can be figured out using state
@@ -173,19 +203,23 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         self.token_history = token_history
 
         if isinstance(seq, bytes):
-            self.char = seq[lex_pos:lex_pos + 1].decode("ascii", "backslashreplace")
+            self.char = seq[lex_pos : lex_pos + 1].decode("ascii", "backslashreplace")
         else:
             self.char = seq[lex_pos]
         self._context = self.get_context(seq)
 
-
     def __str__(self):
-        message = "No terminal matches '%s' in the current parser context, at line %d col %d" % (self.char, self.line, self.column)
-        message += '\n\n' + self._context
+        message = (
+            "No terminal matches '%s' in the current parser context, at line %d col %d"
+            % (self.char, self.line, self.column)
+        )
+        message += "\n\n" + self._context
         if self.allowed:
             message += self._format_expected(self.allowed)
         if self.token_history:
-            message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in self.token_history)
+            message += "\nPrevious tokens: %s\n" % ", ".join(
+                repr(t) for t in self.token_history
+            )
         return message
 
 
@@ -204,13 +238,22 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     Note: These parameters are available as attributes of the instance.
     """
 
-    def __init__(self, token, expected, considered_rules=None, state=None, interactive_parser=None, terminals_by_name=None, token_history=None):
+    def __init__(
+        self,
+        token,
+        expected,
+        considered_rules=None,
+        state=None,
+        interactive_parser=None,
+        terminals_by_name=None,
+        token_history=None,
+    ):
         super(UnexpectedToken, self).__init__()
-        
+
         # TODO considered_rules and expected can be figured out using state
-        self.line = getattr(token, 'line', '?')
-        self.column = getattr(token, 'column', '?')
-        self.pos_in_stream = getattr(token, 'pos_in_stream', None)
+        self.line = getattr(token, "line", "?")
+        self.column = getattr(token, "column", "?")
+        self.pos_in_stream = getattr(token, "pos_in_stream", None)
         self.state = state
 
         self.token = token
@@ -221,16 +264,21 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self._terminals_by_name = terminals_by_name
         self.token_history = token_history
 
-
     @property
     def accepts(self):
         if self._accepts is NO_VALUE:
-            self._accepts = self.interactive_parser and self.interactive_parser.accepts()
+            self._accepts = (
+                self.interactive_parser and self.interactive_parser.accepts()
+            )
         return self._accepts
 
     def __str__(self):
-        message = ("Unexpected token %r at line %s, column %s.\n%s"
-                   % (self.token, self.line, self.column, self._format_expected(self.accepts or self.expected)))
+        message = "Unexpected token %r at line %s, column %s.\n%s" % (
+            self.token,
+            self.line,
+            self.column,
+            self._format_expected(self.accepts or self.expected),
+        )
         if self.token_history:
             message += "Previous tokens: %r\n" % self.token_history
 
@@ -238,9 +286,11 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
     @property
     def puppet(self):
-        warn("UnexpectedToken.puppet attribute has been renamed to interactive_parser", DeprecationWarning)
+        warn(
+            "UnexpectedToken.puppet attribute has been renamed to interactive_parser",
+            DeprecationWarning,
+        )
         return self.interactive_parser
-    
 
 
 class VisitError(LarkError):
@@ -263,5 +313,6 @@ class VisitError(LarkError):
         self.rule = rule
         self.obj = obj
         self.orig_exc = orig_exc
+
 
 ###}

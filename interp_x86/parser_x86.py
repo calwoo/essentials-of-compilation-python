@@ -3,7 +3,8 @@
 
 from lark import Lark
 
-x86_parser = Lark(r"""
+x86_parser = Lark(
+    r"""
     ?instr: "movq" arg "," arg -> movq
           | "addq" arg "," arg -> addq
           | "subq" arg "," arg -> subq
@@ -56,9 +57,13 @@ x86_parser = Lark(r"""
 
     %import common.WS
     %ignore WS
-    """, start='prog', parser='lalr')
+    """,
+    start="prog",
+    parser="lalr",
+)
 
-x86_parser_instrs = Lark(r"""
+x86_parser_instrs = Lark(
+    r"""
     ?instr: "movq" arg "," arg -> movq
           | "addq" arg "," arg -> addq
           | "subq" arg "," arg -> subq
@@ -107,5 +112,7 @@ x86_parser_instrs = Lark(r"""
 
     %import common.WS
     %ignore WS
-    """, start='instrs', parser='lalr')
-
+    """,
+    start="instrs",
+    parser="lalr",
+)

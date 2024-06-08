@@ -7,6 +7,7 @@ from typing import Set, Dict, Tuple
 
 # Skeleton code for the chapter on Register Allocation
 
+
 class Compiler(compiler.Compiler):
 
     ###########################################################################
@@ -29,8 +30,9 @@ class Compiler(compiler.Compiler):
     # Build Interference
     ############################################################################
 
-    def build_interference(self, p: X86Program,
-                           live_after: Dict[instr, Set[location]]) -> UndirectedAdjList:
+    def build_interference(
+        self, p: X86Program, live_after: Dict[instr, Set[location]]
+    ) -> UndirectedAdjList:
         # YOUR CODE HERE
         pass
 
@@ -39,13 +41,13 @@ class Compiler(compiler.Compiler):
     ############################################################################
 
     # Returns the coloring and the set of spilled variables.
-    def color_graph(self, graph: UndirectedAdjList,
-                    variables: Set[location]) -> Tuple[Dict[location, int], Set[location]]:
+    def color_graph(
+        self, graph: UndirectedAdjList, variables: Set[location]
+    ) -> Tuple[Dict[location, int], Set[location]]:
         # YOUR CODE HERE
         pass
 
-    def allocate_registers(self, p: X86Program,
-                           graph: UndirectedAdjList) -> X86Program:
+    def allocate_registers(self, p: X86Program, graph: UndirectedAdjList) -> X86Program:
         # YOUR CODE HERE
         pass
 

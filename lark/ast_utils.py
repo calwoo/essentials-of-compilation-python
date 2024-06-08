@@ -6,12 +6,15 @@ import inspect, re
 
 from lark import Transformer, v_args
 
+
 class Ast(object):
     """Abstract class
 
     Subclasses will be collected by `create_transformer()`
     """
+
     pass
+
 
 class AsList(object):
     """Abstract class
@@ -19,13 +22,17 @@ class AsList(object):
     Subclasses will be instanciated with the parse results as a single list, instead of as arguments.
     """
 
+
 def camel_to_snake(name):
-    return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
 
 def _call(func, _data, children, _meta):
     return func(*children)
 
+
 inline = v_args(wrapper=_call)
+
 
 def create_transformer(ast_module, transformer=None):
     """Collects `Ast` subclasses from the given module, and creates a Lark transformer that builds the AST.
@@ -42,7 +49,7 @@ def create_transformer(ast_module, transformer=None):
     t = transformer or Transformer()
 
     for name, obj in inspect.getmembers(ast_module):
-        if not name.startswith('_') and inspect.isclass(obj):
+        if not name.startswith("_") and inspect.isclass(obj):
             if issubclass(obj, Ast):
                 if not issubclass(obj, AsList):
                     obj = inline(obj).__get__(t)

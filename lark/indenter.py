@@ -4,9 +4,11 @@ from .exceptions import LarkError
 from .lark import PostLex
 from .lexer import Token
 
+
 ###{standalone
 class DedentError(LarkError):
     pass
+
 
 class Indenter(PostLex):
     def __init__(self):
@@ -20,8 +22,8 @@ class Indenter(PostLex):
 
         yield token
 
-        indent_str = token.rsplit('\n', 1)[1] # Tabs and spaces
-        indent = indent_str.count(' ') + indent_str.count('\t') * self.tab_len
+        indent_str = token.rsplit("\n", 1)[1]  # Tabs and spaces
+        indent = indent_str.count(" ") + indent_str.count("\t") * self.tab_len
 
         if indent > self.indent_level[-1]:
             self.indent_level.append(indent)
@@ -32,7 +34,10 @@ class Indenter(PostLex):
                 yield Token.new_borrow_pos(self.DEDENT_type, indent_str, token)
 
             if indent != self.indent_level[-1]:
-                raise DedentError('Unexpected dedent to column %s. Expected dedent to %s' % (indent, self.indent_level[-1]))
+                raise DedentError(
+                    "Unexpected dedent to column %s. Expected dedent to %s"
+                    % (indent, self.indent_level[-1])
+                )
 
     def _process(self, stream):
         for token in stream:
@@ -50,7 +55,7 @@ class Indenter(PostLex):
 
         while len(self.indent_level) > 1:
             self.indent_level.pop()
-            yield Token(self.DEDENT_type, '')
+            yield Token(self.DEDENT_type, "")
 
         assert self.indent_level == [0], self.indent_level
 
@@ -63,5 +68,6 @@ class Indenter(PostLex):
     @property
     def always_accept(self):
         return (self.NL_type,)
+
 
 ###}
