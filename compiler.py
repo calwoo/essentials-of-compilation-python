@@ -86,16 +86,61 @@ class Compiler:
     ############################################################################
 
     def select_arg(self, e: expr) -> arg:
-        # YOUR CODE HERE
-        pass
+        match e:
+            case Constant(n):
+                return Immediate(n)
+            case Name(var):
+                return Variable(var)
 
     def select_stmt(self, s: stmt) -> List[instr]:
-        # YOUR CODE HERE
-        pass
+        match s:
+            case Expr(Call(Name("print"), [atm])):
+                arg = self.select_arg(atm)
+                return [
+                    Instr("movq", (arg, Reg("rdi"))),
+                    Callq(label_name("print_int"), 1)
+                ]
+            case Assign([Name(var)], exp):
+                arg = self.select_arg(Name(var))
+                match exp:
+                    case Call(Name("input_int"), []):
+                        return [
+                            Callq(label_name("read_int"), 0),
+                            Instr("movq", (Reg("rax"), arg)),
+                        ]
+                    case UnaryOp(USub(), atm):
+                        arg0 = self.select_arg(atm)
+                        return [
+                            Instr("movq", (arg0, Reg("rax"))),
+                            Instr("negq", (Reg("rax"),)),
+                            Instr("movq", (Reg("rax"), arg)),
+                        ]
+                    case BinOp(atm1, Add(), atm2):
+                        arg1 = self.select_arg(atm1)
+                        arg2 = self.select_arg(atm2)
+                        return [
+                            Instr("movq", (arg1, Reg("rax"))),
+                            Instr("addq", (arg2, Reg("rax"))),
+                            Instr("movq", (Reg("rax"), arg)),
+                        ]
+                    case BinOp(atm1, Sub(), atm2):
+                        arg1 = self.select_arg(atm1)
+                        arg2 = self.select_arg(atm2)
+                        return [
+                            Instr("movq", (arg1, Reg("rax"))),
+                            Instr("subq", (arg2, Reg("rax"))),
+                            Instr("movq", (Reg("rax"), arg)),
+                        ]
+            case _:
+                raise Exception("select_stmt not implemented")
 
     def select_instructions(self, p: Module) -> X86Program:
-        # YOUR CODE HERE
-        pass
+        instrs = []
+        for s in p.body:
+            x86_instrs = self.select_stmt(s)
+            instrs.extend(x86_instrs)
+        prog = X86Program(body=instrs)
+        return prog
 
     ############################################################################
     # Assign Homes
