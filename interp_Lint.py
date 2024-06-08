@@ -94,13 +94,72 @@ class InterpLint:
 
 
 # partial evaluator
+def pe_neg(r):
+    match r:
+        case Constant(n):
+            return Constant(neg64(n))
+        case _:
+            return UnaryOp(USub(), r)
+        
+def pe_add(r1, r2):
+    match (r1, r2):
+        case (Constant(n1), Constant(n2)):
+            return Constant(add64(n1, n2))
+        case _:
+            return BinOp(r1, Add(), r2)
+        
+def pe_sub(r1, r2):
+    match (r1, r2):
+        case (Constant(n1), Constant(n2)):
+            return Constant(sub64(n1, n2))
+        case _:
+            return BinOp(r1, Sub(), r2)
+
+def pe_exp(e):
+    match e:
+        case BinOp(left, Add(), right):
+            return pe_add(pe_exp(left), pe_exp(right))
+        case BinOp(left, Sub(), right):
+            return pe_sub(pe_exp(left), pe_exp(right))
+        case UnaryOp(USub(), v):
+            return pe_neg(pe_exp(v))
+        case Constant(value):
+            return e
+        case Call(Name("input_int"), []):
+            return e
+
+def pe_stmt(s):
+    match s:
+        case Expr(Call(Name("print"), [arg])):
+            return Expr(Call(Name("print"), [pe_exp(arg)]))
+        case Expr(value):
+            return Expr(pe_exp(value))
+
+def pe_P_int(p):
+    match p:
+        case Module(body):
+            new_body = [pe_stmt(s) for s in body]
+            return Module(new_body)
 
 
 if __name__ == "__main__":
-    eight = Constant(8)
-    neg_eight = UnaryOp(USub(), eight)
-    read = Call(Name("input_int"), [])
-    ast1_1 = BinOp(read, Add(), neg_eight)
-    pr = Expr(Call(Name("print"), [ast1_1]))
-    p = Module([pr])
-    interp(p)
+    # eight = Constant(8)
+    # neg_eight = UnaryOp(USub(), eight)
+    # read = Call(Name("input_int"), [])
+    # ast1_1 = BinOp(read, Add(), neg_eight)
+    # pr = Expr(Call(Name("print"), [ast1_1]))
+    # p = Module([pr])
+    # interp(p)
+
+    # exercise: create 3 programs in L_int and test whether partially
+    # evaluating them using pe_P_int and then interp_Lint gives same
+    # result as just interp_Lint
+
+    m1 = Module([Expr(BinOp(Constant(3), Add(), Constant(2)))])
+    m2 = Module([Expr(BinOp(Constant(3), Sub(), Constant(2)))])
+    m3 = Module([Expr(UnaryOp(USub(), Constant(8)))])
+
+    assert interp(m1) == interp(pe_P_int(m1))
+    assert interp(m2) == interp(pe_P_int(m2))
+    assert interp(m3) == interp(pe_P_int(m3))
+    print("all tests passed")
