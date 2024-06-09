@@ -209,5 +209,33 @@ class Compiler:
     ############################################################################
 
     def prelude_and_conclusion(self, p: X86Program) -> X86Program:
-        # YOUR CODE HERE
-        pass
+        # compute how many variables are in program
+        max_offset = 0
+        for i in p.body:
+            match i:
+                case Instr(opcode, (Deref(reg, offset), arg)):
+                    max_offset = max(max_offset, -offset)
+                case Instr(opcode, (arg, Deref(reg, offset))):
+                    max_offset = max(max_offset, -offset)
+                case _:
+                    continue
+
+        # x86-64 requires stack pointer to be 16-byte aligned in prelude
+        if max_offset % 16 != 0:
+            max_offset += (16 - max_offset % 16)
+
+        prelude = [
+            Instr("pushq", (Reg("rbp"),)),
+            Instr("movq", (Reg("rsp"), Reg("rbp"))),
+            Instr("subq", (Immediate(max_offset), Reg("rsp"))),
+        ]
+
+        conclusion = [
+            Instr("addq", (Immediate(max_offset), Reg("rsp"))),
+            Instr("popq", (Reg("rbp"),)),
+            Instr("retq", []),
+        ]
+
+        new_body = prelude + p.body + conclusion
+        new_p = X86Program(body=new_body)
+        return new_p
