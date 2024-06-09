@@ -147,28 +147,62 @@ class Compiler:
     ############################################################################
 
     def assign_homes_arg(self, a: arg, home: Dict[Variable, arg]) -> arg:
-        # YOUR CODE HERE
-        pass
+        match a:
+            case Variable(id_):
+                if a in home:
+                    return home[a]
+                else:
+                    n_existing_vars = len(home)
+                    offset = -8 * (n_existing_vars + 1)
+                    stack_arg = Deref("rbp", offset)
+                    home[a] = stack_arg
+                    return stack_arg
+            case _:
+                return a
 
     def assign_homes_instr(self, i: instr, home: Dict[Variable, arg]) -> instr:
-        # YOUR CODE HERE
-        pass
+        match i:
+            case Instr(opcode, args):
+                stack_args = []
+                for a in args:
+                    new_a = self.assign_homes_arg(a, home)
+                    stack_args.append(new_a)
+                return Instr(opcode, tuple(stack_args))
+            case _:
+                # other instructions don't involve variables or registers,
+                # so just purely pass
+                return i
 
     def assign_homes(self, p: X86Program) -> X86Program:
-        # YOUR CODE HERE
-        pass
+        new_instrs = []
+        stack_homes = {}
+        for i in p.body:
+            new_i = self.assign_homes_instr(i, stack_homes)
+            new_instrs.append(new_i)
+        new_p = X86Program(body=new_instrs)
+        return new_p
 
     ############################################################################
     # Patch Instructions
     ############################################################################
 
     def patch_instr(self, i: instr) -> List[instr]:
-        # YOUR CODE HERE
-        pass
+        match i:
+            case Instr(opcode, (Deref(reg1, offset1), Deref(reg2, offset2))):
+                return [
+                    Instr("movq", (Deref(reg1, offset1), Reg("rax"))),
+                    Instr(opcode, (Reg("rax"), Deref(reg2, offset2))),
+                ]
+            case _:
+                return [i]
 
     def patch_instructions(self, p: X86Program) -> X86Program:
-        # YOUR CODE HERE
-        pass
+        new_instrs = []
+        for i in p.body:
+            new_is = self.patch_instr(i)
+            new_instrs.extend(new_is)
+        new_p = X86Program(body=new_instrs)
+        return new_p
 
     ############################################################################
     # Prelude & Conclusion
