@@ -168,16 +168,34 @@ class Compiler(compiler.Compiler):
     ############################################################################
 
     def assign_homes(self, pseudo_x86: X86Program) -> X86Program:
-        # YOUR CODE HERE
-        pass
+        live_afters = self.uncover_live(pseudo_x86)
+        interference_graph = self.build_interference(pseudo_x86, live_afters)
+        return self.allocate_registers(pseudo_x86, interference_graph)
 
     ###########################################################################
     # Patch Instructions
     ###########################################################################
 
+    def patch_instr(self, i: instr) -> List[instr]:
+        match i:
+            case Instr(opcode, (Deref(reg1, offset1), Deref(reg2, offset2))):
+                if reg1 == reg2 and offset1 == offset2:
+                    return []
+    
+                return [
+                    Instr("movq", (Deref(reg1, offset1), Reg("rax"))),
+                    Instr(opcode, (Reg("rax"), Deref(reg2, offset2))),
+                ]
+            case _:
+                return [i]
+
     def patch_instructions(self, p: X86Program) -> X86Program:
-        # YOUR CODE HERE
-        pass
+        new_instrs = []
+        for i in p.body:
+            new_is = self.patch_instr(i)
+            new_instrs.extend(new_is)
+        new_p = X86Program(body=new_instrs)
+        return new_p
 
     ###########################################################################
     # Prelude & Conclusion
