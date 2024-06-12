@@ -5,6 +5,8 @@ from ast import *
 from x86_ast import *
 from typing import Set, Dict, Tuple
 
+from priority_queue import PriorityQueue
+
 # Skeleton code for the chapter on Register Allocation
 
 
@@ -69,8 +71,23 @@ class Compiler(compiler.Compiler):
     def build_interference(
         self, p: X86Program, live_after: Dict[instr, Set[location]]
     ) -> UndirectedAdjList:
-        # YOUR CODE HERE
-        pass
+        graph = UndirectedAdjList()
+        for i in p.body:
+            match i:
+                case Instr("movq", (src, dest)):
+                    live_after_instr = live_after[i]
+                    for v in live_after_instr:
+                        if v != src and v != dest:
+                            graph.add_edge(dest, v)
+                case _:
+                    write_locs = self.write_vars(i)
+                    live_after_instr = live_after[i]
+                    for d in write_locs:
+                        for v in live_after_instr:
+                            if v != d:
+                                graph.add_edge(d, v)
+        
+        return graph
 
     ############################################################################
     # Allocate Registers
@@ -80,12 +97,71 @@ class Compiler(compiler.Compiler):
     def color_graph(
         self, graph: UndirectedAdjList, variables: Set[location]
     ) -> Tuple[Dict[location, int], Set[location]]:
-        # YOUR CODE HERE
-        pass
+        coloring = {}
+        saturations = {v: set() for v in variables}
+        num_variables = len(variables)
+        while len(coloring) < num_variables:
+            # select max saturated variable
+            comparator = lambda x, y: len(x) < len(y)
+            pqueue = PriorityQueue(comparator)
+            for v in variables:
+                if v not in coloring:
+                    pqueue.push(v)
+            max_saturated_v = pqueue.pop()
+
+            # pick color
+            color = 0
+            while color in saturations[max_saturated_v]:
+                color += 1
+            coloring[max_saturated_v] = color
+
+            # add color to saturation sets of neighbors in interference graph
+            for nb in graph.adjacent(max_saturated_v):
+                saturations[nb].add(color)
+
+        return coloring, variables
 
     def allocate_registers(self, p: X86Program, graph: UndirectedAdjList) -> X86Program:
-        # YOUR CODE HERE
-        pass
+        variables = set(graph.vertices)
+        coloring, _ = self.color_graph(graph, variables)
+
+        # get assignments
+        register_map = {
+            0: Reg("rcx"), 1: Reg("rdx"), 2: Reg("rsi"), 3: Reg("rdi"),
+            4: Reg("r8"), 5: Reg("r9"), 6: Reg("r10"), 7: Reg("rbx"),
+            8: Reg("r12"), 9: Reg("r13"), 10: Reg("r14")
+        }
+
+        mapping = {}
+        for loc, color in coloring.items():
+            if color < 11:
+                mapping[loc] = register_map[color]
+            else:
+                # spill to stack
+                offset = -8 * (color - 11 + 1)
+                stack_pos = Deref("rbp", offset)
+                mapping[loc] = stack_pos
+
+        # alter instructions
+        new_instrs = []
+        for i in p.body:
+            match i:
+                case Instr(opcode, args):
+                    new_args = []
+                    for a in args:
+                        if isinstance(a, Variable):
+                            reg = mapping[a]
+                            new_args.append(reg)
+                        else:
+                            new_args.append(a)
+
+                    new_i = Instr(opcode, tuple(new_args))
+                    new_instrs.append(new_i)
+                case _:
+                    new_instrs.append(i)
+
+        new_p = X86Program(body=new_instrs)
+        return new_p
 
     ############################################################################
     # Assign Homes
